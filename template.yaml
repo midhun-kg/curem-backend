@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Curem Malaria Detection Backend
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 10
+    MemorySize: 128
+    Architectures:
+      - x86_64
+    Layers:
+      - !Ref UtilsLayer
+
+Resources:
+  UtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: utils-layer
+      Description: Shared helpers like dbClient and response()
+      ContentUri: src/layers/utils
+      CompatibleRuntimes:
+        - nodejs18.x
+        - nodejs20.x
+
+  AuthResources:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: stacks/auth-functions.yaml
+
+  TablesResources:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: stacks/dynamodb-tables.yaml

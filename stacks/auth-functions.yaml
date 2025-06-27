@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+
+  SignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/auth/signup.handler
+      Events:
+        SignupAPI:
+          Type: Api
+          Properties:
+            Path: /auth/signup
+            Method: post
+      Environment:
+        Variables:
+          USERS_TABLE: curem-users
+          JWT_SECRET: curem-signing-secret
+
+  LoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/auth/login.handler
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: post
+      Environment:
+        Variables:
+          USERS_TABLE: curem-users
+          JWT_SECRET: curem-signing-secret
+
+  LogoutFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/functions/auth/logout.handler
+      Events:
+        LogoutAPI:
+          Type: Api
+          Properties:
+            Path: /auth/logout
+            Method: post
