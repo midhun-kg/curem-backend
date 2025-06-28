@@ -13,6 +13,7 @@ Globals:
       - !Ref UtilsLayer
 
 Resources:
+
   UtilsLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -27,6 +28,8 @@ Resources:
     Type: AWS::Serverless::Application
     Properties:
       Location: stacks/auth-functions.yaml
+      Parameters:
+        UtilsLayerArn: !GetAtt UtilsLayer.Arn
 
   TablesResources:
     Type: AWS::Serverless::Application

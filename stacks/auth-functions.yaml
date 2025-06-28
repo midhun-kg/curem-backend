@@ -1,18 +1,34 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
+Transform:
+  - AWS::Serverless-2016-10-31
+  
+Parameters:
+  UtilsLayerArn:
+    Type: String
 
 Resources:
 
   SignupFunction:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: ../
       Handler: src/functions/auth/signup.handler
+      Runtime: nodejs20.x
+      Layers:
+        - !Ref UtilsLayerArn
       Events:
         SignupAPI:
           Type: Api
           Properties:
             Path: /auth/signup
             Method: post
+            Cors: "'*'"
+        SignupPreflight:
+          Type: Api
+          Properties:
+            Path: /auth/signup
+            Method: options
+            Cors: "'*'"
       Environment:
         Variables:
           USERS_TABLE: curem-users
@@ -21,13 +37,24 @@ Resources:
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: ../
       Handler: src/functions/auth/login.handler
+      Runtime: nodejs20.x
+      Layers:
+        - !Ref UtilsLayerArn
       Events:
         LoginAPI:
           Type: Api
           Properties:
             Path: /auth/login
             Method: post
+            Cors: "'*'"
+        LoginPreflight:
+          Type: Api
+          Properties:
+            Path: /auth/login
+            Method: options
+            Cors: "'*'"
       Environment:
         Variables:
           USERS_TABLE: curem-users
@@ -36,10 +63,21 @@ Resources:
   LogoutFunction:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: ../
       Handler: src/functions/auth/logout.handler
+      Runtime: nodejs20.x
+      Layers:
+        - !Sub "${UtilsLayerArn}"
       Events:
         LogoutAPI:
           Type: Api
           Properties:
             Path: /auth/logout
             Method: post
+            Cors: "'*'"
+        LogoutPreflight:
+          Type: Api
+          Properties:
+            Path: /auth/logout
+            Method: options
+            Cors: "'*'"
