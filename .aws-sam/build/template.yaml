@@ -1,50 +1,42 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Curem Malaria Detection Backend
-
 Globals:
   Function:
     Runtime: nodejs20.x
     Timeout: 10
     MemorySize: 128
     Architectures:
-      - x86_64
-    # Apply the Layer and Environment variables to all functions globally.
-    # This now works because the functions are in the same template.
+    - x86_64
     Layers:
-      - !Ref UtilsLayer
+    - Ref: UtilsLayer
     Environment:
       Variables:
         USERS_TABLE: curem-users
         JWT_SECRET: curem-signing-secret
-
 Resources:
-  # --- The Layer ---
   UtilsLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName: utils-layer
       Description: Shared helpers like dbClient and response()
-      ContentUri: src/layers/utils/nodejs/
+      ContentUri: UtilsLayer
       CompatibleRuntimes:
-        - nodejs18.x
-        - nodejs20.x
+      - nodejs18.x
+      - nodejs20.x
     Metadata:
-    # This tells SAM to run 'npm install' inside the ContentUri folder
       BuildMethod: nodejs20.x
-
-  # --- DynamoDB Tables (from your other nested stack) ---
+      SamResourceId: UtilsLayer
   TablesResources:
     Type: AWS::Serverless::Application
     Properties:
-      Location: stacks/dynamodb-tables.yaml
-
-  # --- Auth Functions (Moved from the nested stack into this file) ---
+      Location: TablesResources/template.yaml
+    Metadata:
+      SamResourceId: TablesResources
   SignupFunction:
     Type: AWS::Serverless::Function
     Properties:
-      # CodeUri now points directly to the auth functions' folder
-      CodeUri: .
+      CodeUri: SignupFunction
       Handler: src/functions/auth/signup.handler
       Events:
         SignupAPI:
@@ -52,11 +44,12 @@ Resources:
           Properties:
             Path: /auth/signup
             Method: post
-
+    Metadata:
+      SamResourceId: SignupFunction
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
+      CodeUri: LoginFunction
       Handler: src/functions/auth/login.handler
       Events:
         LoginAPI:
@@ -64,11 +57,12 @@ Resources:
           Properties:
             Path: /auth/login
             Method: post
-
+    Metadata:
+      SamResourceId: LoginFunction
   LogoutFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
+      CodeUri: LogoutFunction
       Handler: src/functions/auth/logout.handler
       Events:
         LogoutAPI:
@@ -76,9 +70,10 @@ Resources:
           Properties:
             Path: /auth/logout
             Method: post
-
+    Metadata:
+      SamResourceId: LogoutFunction
 Outputs:
-  # This makes the API endpoint visible after deployment
   ApiEndpoint:
-    Description: "API Gateway endpoint URL for Prod stages"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.aclmazonaws.com/Prod"
+    Description: API Gateway endpoint URL for Prod stages
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.aclmazonaws.com/Prod
