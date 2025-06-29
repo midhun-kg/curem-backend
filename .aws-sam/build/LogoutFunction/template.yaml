@@ -52,6 +52,9 @@ Resources:
           Properties:
             Path: /auth/signup
             Method: post
+    Policies:
+      - DynamoDBReadPolicy:
+          TableName: "curem-users"
 
   LoginFunction:
     Type: AWS::Serverless::Function
@@ -64,6 +67,9 @@ Resources:
           Properties:
             Path: /auth/login
             Method: post
+    Policies:
+      - DynamoDBReadPolicy:
+          TableName: "curem-users"
 
   LogoutFunction:
     Type: AWS::Serverless::Function
@@ -76,6 +82,9 @@ Resources:
           Properties:
             Path: /auth/logout
             Method: post
+    Policies:
+      - DynamoDBReadPolicy:
+          TableName: "curem-users"
 
 Outputs:
   # This makes the API endpoint visible after deployment

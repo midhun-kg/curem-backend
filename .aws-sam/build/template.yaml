@@ -44,6 +44,9 @@ Resources:
           Properties:
             Path: /auth/signup
             Method: post
+    Policies:
+    - DynamoDBReadPolicy:
+        TableName: curem-users
     Metadata:
       SamResourceId: SignupFunction
   LoginFunction:
@@ -57,6 +60,9 @@ Resources:
           Properties:
             Path: /auth/login
             Method: post
+    Policies:
+    - DynamoDBReadPolicy:
+        TableName: curem-users
     Metadata:
       SamResourceId: LoginFunction
   LogoutFunction:
@@ -70,6 +76,9 @@ Resources:
           Properties:
             Path: /auth/logout
             Method: post
+    Policies:
+    - DynamoDBReadPolicy:
+        TableName: curem-users
     Metadata:
       SamResourceId: LogoutFunction
 Outputs:
