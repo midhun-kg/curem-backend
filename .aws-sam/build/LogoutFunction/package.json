@@ -1,12 +1,9 @@
 {
-  "name": "malaria-detection-backend",
+  "name": "auth-functions",
   "version": "1.0.0",
-  "description": "Backend for Curem malaria detection app using AWS SAM",
-  "main": "index.js",
+  "description": "Dependencies for the authentication functions",
   "dependencies": {
-    "aws-sdk": "^2.1485.0",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.0",
-    "uuid": "^9.0.0"
+    "jsonwebtoken": "^9.0.2"
   }
 }

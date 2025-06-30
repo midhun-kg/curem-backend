@@ -52,13 +52,13 @@ Resources:
       KeySchema:
       - AttributeName: deviceId
         KeyType: HASH
-  TestsTable:
+  AnalysisTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: curem-tests
+      TableName: curem-analysis
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-      - AttributeName: testId
+      - AttributeName: analysisId
         AttributeType: S
       - AttributeName: patientId
         AttributeType: S
@@ -67,10 +67,10 @@ Resources:
       - AttributeName: result
         AttributeType: S
       KeySchema:
-      - AttributeName: testId
+      - AttributeName: analysisId
         KeyType: HASH
       GlobalSecondaryIndexes:
-      - IndexName: PatientTestIndex
+      - IndexName: PatientAnalysisIndex
         KeySchema:
         - AttributeName: patientId
           KeyType: HASH
@@ -94,16 +94,40 @@ Resources:
       AttributeDefinitions:
       - AttributeName: reportId
         AttributeType: S
-      - AttributeName: sampleId
+      - AttributeName: analysisId
+        AttributeType: S
+      - AttributeName: userId
+        AttributeType: S
+      - AttributeName: patientId
+        AttributeType: S
+      - AttributeName: createdAt
         AttributeType: S
       KeySchema:
       - AttributeName: reportId
         KeyType: HASH
       GlobalSecondaryIndexes:
-      - IndexName: SampleIdIndex
+      - IndexName: AnalysisIdIndex
         KeySchema:
-        - AttributeName: sampleId
+        - AttributeName: analysisId
           KeyType: HASH
+        - AttributeName: createdAt
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      - IndexName: UserReportsIndex
+        KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: createdAt
+          KeyType: RANGE
+        Projection:
+          ProjectionType: ALL
+      - IndexName: PatientReportsIndex
+        KeySchema:
+        - AttributeName: patientId
+          KeyType: HASH
+        - AttributeName: createdAt
+          KeyType: RANGE
         Projection:
           ProjectionType: ALL
 Outputs:
@@ -116,9 +140,9 @@ Outputs:
   DevicesTableName:
     Value:
       Ref: DevicesTable
-  TestsTableName:
+  AnalysisTableName:
     Value:
-      Ref: TestsTable
+      Ref: AnalysisTable
   ReportsTableName:
     Value:
       Ref: ReportsTable

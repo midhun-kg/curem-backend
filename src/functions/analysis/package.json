@@ -1,0 +1,9 @@
+{
+    "name": "analysis-function",
+  "version": "1.0.0",
+  "description": "Dependencies for the submit analysis function",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.839.0",
+    "@aws-sdk/s3-request-presigner": "^3.839.0"
+  }
+}

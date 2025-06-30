@@ -9,17 +9,20 @@ Globals:
     MemorySize: 128
     Architectures:
       - x86_64
-    # Apply the Layer and Environment variables to all functions globally.
-    # This now works because the functions are in the same template.
     Layers:
       - !Ref UtilsLayer
     Environment:
       Variables:
         USERS_TABLE: curem-users
         JWT_SECRET: curem-signing-secret
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'https://main.d325hmvqcsbv56.amplifyapp.com'"
 
 Resources:
-  # --- The Layer ---
+  # --- The Shared Layer ---
   UtilsLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
@@ -30,64 +33,178 @@ Resources:
         - nodejs18.x
         - nodejs20.x
     Metadata:
-    # This tells SAM to run 'npm install' inside the ContentUri folder
       BuildMethod: nodejs20.x
 
-  # --- DynamoDB Tables (from your other nested stack) ---
+  # --- The S3 Bucket for Image Uploads ---
+  ImageUploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: curem-image-bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - PUT
+              - POST
+              - GET
+            AllowedOrigins:
+              - '*' # In production, change to your actual web app's domain
+            MaxAge: 3000
+
+  # --- DynamoDB Tables (Nested Stack) ---
   TablesResources:
     Type: AWS::Serverless::Application
     Properties:
       Location: stacks/dynamodb-tables.yaml
 
-  # --- Auth Functions (Moved from the nested stack into this file) ---
+  # --- Auth Functions ---
   SignupFunction:
     Type: AWS::Serverless::Function
     Properties:
-      # CodeUri now points directly to the auth functions' folder
-      CodeUri: .
-      Handler: src/functions/auth/signup.handler
+      CodeUri: src/functions/auth/
+      Handler: signup.handler
       Events:
         SignupAPI:
           Type: Api
           Properties:
             Path: /auth/signup
             Method: post
-    Policies:
-      - DynamoDBReadPolicy:
-          TableName: "curem-users"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: "curem-users"
 
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
-      Handler: src/functions/auth/login.handler
+      CodeUri: src/functions/auth/
+      Handler: login.handler
       Events:
         LoginAPI:
           Type: Api
           Properties:
             Path: /auth/login
             Method: post
-    Policies:
-      - DynamoDBReadPolicy:
-          TableName: "curem-users"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: "curem-users"
 
   LogoutFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
-      Handler: src/functions/auth/logout.handler
+      CodeUri: src/functions/auth/
+      Handler: logout.handler
       Events:
         LogoutAPI:
           Type: Api
           Properties:
             Path: /auth/logout
             Method: post
-    Policies:
-      - DynamoDBReadPolicy:
-          TableName: "curem-users"
+
+  # --- Other Business Logic Functions ---
+  SubmitAnalysisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/analysis/
+      Handler: submitAnalysis.handler
+      Events:
+        SubmitAnalysisAPI:
+          Type: Api
+          Properties:
+            Path: /analysis
+            Method: post
+      Environment:
+        Variables:
+          ANALYSIS_TABLE: curem-analysis
+          UPLOAD_BUCKET: !Ref ImageUploadBucket # Reference the bucket resource
+          REGION: ap-south-1
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: curem-analysis
+        - S3WritePolicy:
+            BucketName: !Ref ImageUploadBucket # Reference the bucket resource
+
+  ManagePatientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/patients/
+      Handler: manage.handler
+      Events:
+        PatientsApiRoot:
+          Type: Api
+          Properties:
+            Path: /patients
+            Method: ANY
+        PatientsApiById:
+          Type: Api
+          Properties:
+            Path: /patients/{patientId}
+            Method: ANY
+      Environment:
+        Variables:
+          PATIENTS_TABLE: curem-patients
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: curem-patients
+
+  ManageDevicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/devices/
+      Handler: manage.handler
+      Events:
+        DevicesApiRoot:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: ANY
+        DevicesApiById:
+          Type: Api
+          Properties:
+            Path: /devices/{deviceId}
+            Method: ANY
+      Environment:
+        Variables:
+          DEVICES_TABLE: curem-devices
+          JWT_SECRET: curem-signing-secret # Note: This is duplicated from Globals
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: curem-devices
+
+  ManageReportsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/reports/
+      Handler: manage.handler
+      Events:
+        GetReportsByUser:
+          Type: Api
+          Properties:
+            Path: /reports/user/{userId}
+            Method: get
+        GetReportsByPatient:
+          Type: Api
+          Properties:
+            Path: /reports/patient/{patientId}
+            Method: get
+        GetReportById:
+          Type: Api
+          Properties:
+            Path: /reports/{reportId}
+            Method: get
+      Environment:
+        Variables:
+          REPORTS_TABLE: curem-reports
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: curem-reports
 
 Outputs:
-  # This makes the API endpoint visible after deployment
   ApiEndpoint:
-    Description: "API Gateway endpoint URL for Prod stages"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.aclmazonaws.com/Prod"
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"

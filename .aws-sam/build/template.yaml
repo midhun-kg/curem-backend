@@ -14,6 +14,11 @@ Globals:
       Variables:
         USERS_TABLE: curem-users
         JWT_SECRET: curem-signing-secret
+  Api:
+    Cors:
+      AllowMethods: '''GET,POST,PUT,DELETE,OPTIONS'''
+      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+      AllowOrigin: '''https://main.d325hmvqcsbv56.amplifyapp.com'''
 Resources:
   UtilsLayer:
     Type: AWS::Serverless::LayerVersion
@@ -27,6 +32,26 @@ Resources:
     Metadata:
       BuildMethod: nodejs20.x
       SamResourceId: UtilsLayer
+  ImageUploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: curem-image-bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+        - AllowedHeaders:
+          - '*'
+          AllowedMethods:
+          - PUT
+          - POST
+          - GET
+          AllowedOrigins:
+          - '*'
+          MaxAge: 3000
   TablesResources:
     Type: AWS::Serverless::Application
     Properties:
@@ -37,52 +62,152 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: SignupFunction
-      Handler: src/functions/auth/signup.handler
+      Handler: signup.handler
       Events:
         SignupAPI:
           Type: Api
           Properties:
             Path: /auth/signup
             Method: post
-    Policies:
-    - DynamoDBReadPolicy:
-        TableName: curem-users
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: curem-users
     Metadata:
       SamResourceId: SignupFunction
   LoginFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: LoginFunction
-      Handler: src/functions/auth/login.handler
+      Handler: login.handler
       Events:
         LoginAPI:
           Type: Api
           Properties:
             Path: /auth/login
             Method: post
-    Policies:
-    - DynamoDBReadPolicy:
-        TableName: curem-users
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName: curem-users
     Metadata:
       SamResourceId: LoginFunction
   LogoutFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: LogoutFunction
-      Handler: src/functions/auth/logout.handler
+      Handler: logout.handler
       Events:
         LogoutAPI:
           Type: Api
           Properties:
             Path: /auth/logout
             Method: post
-    Policies:
-    - DynamoDBReadPolicy:
-        TableName: curem-users
     Metadata:
       SamResourceId: LogoutFunction
+  SubmitAnalysisFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: SubmitAnalysisFunction
+      Handler: submitAnalysis.handler
+      Events:
+        SubmitAnalysisAPI:
+          Type: Api
+          Properties:
+            Path: /analysis
+            Method: post
+      Environment:
+        Variables:
+          ANALYSIS_TABLE: curem-analysis
+          UPLOAD_BUCKET:
+            Ref: ImageUploadBucket
+          REGION: ap-south-1
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: curem-analysis
+      - S3WritePolicy:
+          BucketName:
+            Ref: ImageUploadBucket
+    Metadata:
+      SamResourceId: SubmitAnalysisFunction
+  ManagePatientsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ManagePatientsFunction
+      Handler: manage.handler
+      Events:
+        PatientsApiRoot:
+          Type: Api
+          Properties:
+            Path: /patients
+            Method: ANY
+        PatientsApiById:
+          Type: Api
+          Properties:
+            Path: /patients/{patientId}
+            Method: ANY
+      Environment:
+        Variables:
+          PATIENTS_TABLE: curem-patients
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: curem-patients
+    Metadata:
+      SamResourceId: ManagePatientsFunction
+  ManageDevicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ManageDevicesFunction
+      Handler: manage.handler
+      Events:
+        DevicesApiRoot:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: ANY
+        DevicesApiById:
+          Type: Api
+          Properties:
+            Path: /devices/{deviceId}
+            Method: ANY
+      Environment:
+        Variables:
+          DEVICES_TABLE: curem-devices
+          JWT_SECRET: curem-signing-secret
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName: curem-devices
+    Metadata:
+      SamResourceId: ManageDevicesFunction
+  ManageReportsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ManageReportsFunction
+      Handler: manage.handler
+      Events:
+        GetReportsByUser:
+          Type: Api
+          Properties:
+            Path: /reports/user/{userId}
+            Method: get
+        GetReportsByPatient:
+          Type: Api
+          Properties:
+            Path: /reports/patient/{patientId}
+            Method: get
+        GetReportById:
+          Type: Api
+          Properties:
+            Path: /reports/{reportId}
+            Method: get
+      Environment:
+        Variables:
+          REPORTS_TABLE: curem-reports
+      Policies:
+      - DynamoDBReadPolicy:
+          TableName: curem-reports
+    Metadata:
+      SamResourceId: ManageReportsFunction
 Outputs:
   ApiEndpoint:
-    Description: API Gateway endpoint URL for Prod stages
+    Description: API Gateway endpoint URL for Prod stage
     Value:
-      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.aclmazonaws.com/Prod
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod
